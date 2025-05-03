@@ -2,10 +2,35 @@
 import * as uuid from "uuid";
 import mailService from "./services/mail-service.js";
 import tokenService from "./services/tokenService.js";
-import axios from "axios";
+import InnerCommunicationService from "./services/innerCommunicationService.js";
 
 class UserController {
 
+    async doesUserExist(req, res){
+        let user = req.user;
+        if (!user.is_server){
+            return res.status(400).json({
+                success: false,
+                error: 'Ошибка доступа'
+            });
+        }
+        try {
+            let {user_id} = req.query;
+            let checkUser = await UserModel.getUserById(user_id);
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    exist: !!checkUser
+                }
+            });
+        } catch (e) {
+            res.status(500).json({
+                success: false,
+                error: 'Unknown error'
+            });
+        }
+    }
     async createUser(req, res){
         let user = req.user;
         if (user) {
@@ -71,10 +96,10 @@ class UserController {
             createdUserId = user.user_id;
 
             //TODO set brocker!!!
-            let createProfileRequest = await axios.post("http://localhost:8001/api/createProfile", {
+            let createProfileRequest = await InnerCommunicationService.post("/api/createProfile", {
                 user_id: user.user_id,
                 nickname: nickname
-            });
+            }, 8001);
 
             if (createProfileRequest.status === 200 && createProfileRequest.data.success) {
 
@@ -261,7 +286,7 @@ class UserController {
                 });
             }
 
-            await mailService.sendChangePasswordMail(email, "http://localhost:3000/changePassword/" + forgotPasswordLink);
+            await mailService.sendChangePasswordMail(email, "http://localhost:9000/changePassword/" + forgotPasswordLink);
             res.status(200).json({
                 success: true,
                 data: {}

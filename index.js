@@ -30,7 +30,8 @@ router.post('/api/refreshToken', UserController.refreshToken.bind(UserController
 router.post('/api/logout', authMiddleware, UserController.logout.bind(UserController));
 router.post('/api/forgotPassword', notAuthMiddleware, UserController.forgotPassword.bind(UserController));
 router.post('/api/changePassword', notAuthMiddleware, UserController.changePassword.bind(UserController));
-router.post('/api/activateAccount', notAuthMiddleware, UserController.activateAccount.bind(UserController));
+router.get('/api/activateAccount', notAuthMiddleware, UserController.activateAccount.bind(UserController));
+router.get('/api/doesUserExist', authMiddleware, UserController.doesUserExist.bind(UserController));
 
 router.get('/health', (req, res) => res.status(200).send('OK'));
 
