@@ -276,6 +276,14 @@ class UserController {
                 });
             }
 
+            let forgotTokenExists = await UserModel.tryGetUserPasswordForgotToken(user.user_id);
+            if (forgotTokenExists) {
+                return res.status(200).json({
+                    success: false,
+                    error: 'Ссылка для восстановления пароля была уже отправлена на email'
+                });
+            }
+
             const forgotPasswordLink = uuid.v4();
             let setChangeLinkRes = await UserModel.setForgotPasswordToken(user.user_id, forgotPasswordLink);
 
@@ -356,7 +364,6 @@ class UserController {
             success: true,
             data: {
                 user_id: user.user_id,
-                is_admin: user.is_admin,
                 refreshToken: tokens.refreshToken,
                 accessToken: tokens.accessToken
             }
