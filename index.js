@@ -37,5 +37,5 @@ router.get('/health', (req, res) => res.status(200).send('OK'));
 
 
 app.listen(8002, () => {
-
+    console.log("started server")
 })
