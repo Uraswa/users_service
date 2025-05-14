@@ -20,6 +20,7 @@ app.use(cors({
 
 const router = express.Router()
 app.use(router);
+app.disable('etag');
 
 router.post('/api/createUser', notAuthMiddleware, UserController.createUser.bind(UserController));
 router.post('/api/login', notAuthMiddleware, UserController.loginUser.bind(UserController));
@@ -29,9 +30,6 @@ router.post('/api/forgotPassword', notAuthMiddleware, UserController.forgotPassw
 router.post('/api/changePassword', notAuthMiddleware, UserController.changePassword.bind(UserController));
 router.get('/api/activateAccount', notAuthMiddleware, UserController.activateAccount.bind(UserController));
 router.get('/api/doesUserExist', authMiddleware, UserController.doesUserExist.bind(UserController));
-
-router.get('/health', (req, res) => res.status(200).send('OK'));
-
 
 app.listen(8002, () => {
     console.log("started server")

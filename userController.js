@@ -103,7 +103,7 @@ class UserController {
 
             if (createProfileRequest.status === 200 && createProfileRequest.data.success) {
 
-                await mailService.sendActivationMail(email, "http://localhost:9000/activation/" + activationLink)
+                await mailService.sendActivationMail(email, "http://"+process.env.API_URL+"/activation/" + activationLink)
                 res.status(200).json({
                     success: true,
                     data: {}
@@ -294,7 +294,7 @@ class UserController {
                 });
             }
 
-            await mailService.sendChangePasswordMail(email, "http://localhost:9000/changePassword/" + forgotPasswordLink);
+            await mailService.sendChangePasswordMail(email, "http://"+process.env.API_URL+"/changePassword/" + forgotPasswordLink);
             res.status(200).json({
                 success: true,
                 data: {}
