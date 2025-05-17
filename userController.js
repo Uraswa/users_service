@@ -2,7 +2,6 @@
 import * as uuid from "uuid";
 import mailService from "./services/mail-service.js";
 import tokenService from "./services/tokenService.js";
-import InnerCommunicationService from "./services/innerCommunicationService.js";
 
 class UserController {
 
@@ -43,7 +42,7 @@ class UserController {
         let createdUserId = -1;
 
         try {
-            const {email, password, nickname} = req.body;
+            const {email, password} = req.body;
             if (!email || !password) {
                 return res.status(200).json({
                     success: false,
@@ -67,14 +66,6 @@ class UserController {
                 });
             }
 
-            if (!nickname || nickname.length > 25) {
-                return res.status(200).json({
-                    success: false,
-                    error: 'Имя должно быть не пустым и не длиннее 25 символов!',
-                    error_field: "firstname"
-                });
-            }
-
             let userWithEmail = await UserModel.getUserByEmail(email);
             if (userWithEmail) {
                 return res.status(200).json({
@@ -95,26 +86,11 @@ class UserController {
 
             createdUserId = user.user_id;
 
-            //TODO set brocker!!!
-            let createProfileRequest = await InnerCommunicationService.post("/api/createProfile", {
-                user_id: user.user_id,
-                nickname: nickname
-            }, 8001);
-
-            if (createProfileRequest.status === 200 && createProfileRequest.data.success) {
-
-                await mailService.sendActivationMail(email, "http://"+process.env.API_URL+"/activation/" + activationLink)
+            await mailService.sendActivationMail(email, "http://"+process.env.API_URL+"/activation/" + activationLink)
                 res.status(200).json({
                     success: true,
                     data: {}
                 });
-            } else {
-                await UserModel.deleteUser(user.user_id);
-                res.status(500).json({
-                    success: false,
-                    error: "Unknown_error"
-                });
-            }
 
         } catch (error) {
             if (createdUserId !== -1) await UserModel.deleteUser(createdUserId);
