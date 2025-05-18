@@ -106,7 +106,7 @@ class UserModel {
     }
 
     async authUser(email, password) {
-        const query = `SELECT li.user_id, li.password
+        const query = `SELECT u.company_id, li.user_id, li.password
                        FROM user_login_info li
                                 JOIN users u on (u.user_id = li.user_id and u.is_activated = true)
                        WHERE li.email = $1`
@@ -157,7 +157,7 @@ class UserModel {
     }
 
     async getUserByEmail(email) {
-        const query = `SELECT u.user_id, u.is_activated
+        const query = `SELECT u.user_id, u.is_activated, u.company_id
                        FROM user_login_info ul
                                 JOIN users u on u.user_id = ul.user_id
                        WHERE ul.email = $1`
@@ -198,7 +198,7 @@ class UserModel {
 
     async findUserByPasswordForgotToken(passwordForgotToken) {
         const query = `
-            SELECT ut.user_id, u.is_activated
+            SELECT ut.user_id, u.is_activated, u.company_id
             FROM users_password_change_tokens ut
                      JOIN users u on u.user_id = ut.user_id
             WHERE ut.password_change_token = $1`;
@@ -245,6 +245,12 @@ class UserModel {
                        FROM users
                        WHERE user_id = $1`;
         const result = await db_query(query, [user_id]);
+        return result.rows[0];
+    }
+
+    async createCorporateUser(company_id){
+        const query = `INSERT INTO users (is_activated, company_id) VALUES (true, $1) RETURNING *`;
+        const result = await masterPool.query(query, [company_id]);
         return result.rows[0];
     }
 }

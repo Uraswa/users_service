@@ -23,6 +23,7 @@ app.use(router);
 app.disable('etag');
 
 router.post('/api/createUser', notAuthMiddleware, UserController.createUser.bind(UserController));
+router.post('/api/createCorporateUser', authMiddleware, UserController.createCorporateUser.bind(UserController));
 router.post('/api/login', notAuthMiddleware, UserController.loginUser.bind(UserController));
 router.post('/api/refreshToken', UserController.refreshToken.bind(UserController));
 router.post('/api/logout', authMiddleware, UserController.logout.bind(UserController));

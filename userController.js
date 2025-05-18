@@ -2,12 +2,15 @@
 import * as uuid from "uuid";
 import mailService from "./services/mail-service.js";
 import tokenService from "./services/tokenService.js";
+import CompanyModel from "./companyModel.js";
+import jwt from "jsonwebtoken";
+import InnerCommunicationService from "./services/innerCommunicationService.js";
 
 class UserController {
 
-    async doesUserExist(req, res){
+    async doesUserExist(req, res) {
         let user = req.user;
-        if (!user.is_server){
+        if (!user.is_server) {
             return res.status(400).json({
                 success: false,
                 error: 'Ошибка доступа'
@@ -20,7 +23,8 @@ class UserController {
             return res.status(200).json({
                 success: true,
                 data: {
-                    exist: !!checkUser
+                    exist: !!checkUser,
+                    company_id: checkUser.company_id
                 }
             });
         } catch (e) {
@@ -30,7 +34,8 @@ class UserController {
             });
         }
     }
-    async createUser(req, res){
+
+    async createUser(req, res) {
         let user = req.user;
         if (user) {
             return res.status(200).json({
@@ -86,11 +91,11 @@ class UserController {
 
             createdUserId = user.user_id;
 
-            await mailService.sendActivationMail(email, "http://"+process.env.API_URL+"/activation/" + activationLink)
-                res.status(200).json({
-                    success: true,
-                    data: {}
-                });
+            await mailService.sendActivationMail(email, "http://" + process.env.API_URL + "/activation/" + activationLink)
+            res.status(200).json({
+                success: true,
+                data: {}
+            });
 
         } catch (error) {
             if (createdUserId !== -1) await UserModel.deleteUser(createdUserId);
@@ -108,7 +113,77 @@ class UserController {
         }
     }
 
-    async loginUser(req, res){
+    async createCorporateUser(req, res) {
+        let user = req.user;
+
+        if (!user.is_company) {
+            return res.status(200).json({
+                success: false,
+                error: "Permission_denied"
+            })
+        }
+
+        try {
+
+            if (!await CompanyModel.doesCompanyExist(user.company_id)) {
+                return res.status(200).json({
+                    success: false,
+                    error: "Permission_denied"
+                })
+            }
+
+            let corporateUser = await UserModel.createCorporateUser(user.company_id);
+            if (!corporateUser) {
+                return res.status(200).json({
+                    success: false,
+                    error: "Unknown_error"
+                })
+            }
+
+            let payload = {
+                user_id: corporateUser.user_id,
+                company_id: user.company_id
+            }
+
+            let user_api_key = jwt.sign(payload, process.env.JWT_ACCESS_SECRET);
+            let profileSuccess = false;
+
+            try {
+                let profileResponse = await InnerCommunicationService.post('/api/profiles/updateProfile', {
+                    nickname: req.body.nickname,
+                    user_id: corporateUser.user_id,
+                    company_id: user.company_id
+                });
+
+                if (profileResponse.status === 200 && profileResponse.data.success) {
+                    profileSuccess = true;
+                }
+
+            } catch (e) {
+                console.log("PROFILE CREATION FAILED")
+            }
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    user_api_key: user_api_key,
+                    user_id: corporateUser.user_id,
+                    profileCreated: profileSuccess
+                }
+            })
+
+        } catch (e) {
+            console.log(e);
+        }
+
+        res.status(500).json({
+                success: false,
+                error: 'Unknown error'
+            });
+
+    }
+
+    async loginUser(req, res) {
         let user = req.user;
         if (user) {
             return res.status(200).json({
@@ -178,7 +253,10 @@ class UserController {
                 });
             }
 
-            const tokens = tokenService.generateTokens({user_id: user.user_id})
+            const tokens = tokenService.generateTokens({
+                user_id: user.user_id,
+                company_id: user.company_id
+            })
             let saveTokenRes = await UserModel.saveRefreshToken(user.user_id, tokens.refreshToken);
             if (!saveTokenRes) {
                 return res.status(200).json({
@@ -206,7 +284,7 @@ class UserController {
         }
     }
 
-    async logout(req, res){
+    async logout(req, res) {
 
         try {
             const {refreshToken} = req.cookies;
@@ -231,7 +309,7 @@ class UserController {
         }
     }
 
-    async forgotPassword(req, res){
+    async forgotPassword(req, res) {
         let user = req.user;
         if (user) {
             return res.status(200).json({
@@ -270,7 +348,7 @@ class UserController {
                 });
             }
 
-            await mailService.sendChangePasswordMail(email, "http://"+process.env.API_URL+"/changePassword/" + forgotPasswordLink);
+            await mailService.sendChangePasswordMail(email, "http://" + process.env.API_URL + "/changePassword/" + forgotPasswordLink);
             res.status(200).json({
                 success: true,
                 data: {}
@@ -285,7 +363,7 @@ class UserController {
         }
     }
 
-    async changePassword(req, res){
+    async changePassword(req, res) {
         try {
             const {password_change_token, password} = req.body;
 
@@ -331,7 +409,10 @@ class UserController {
     }
 
     async doAuth(res, user) {
-        const tokens = tokenService.generateTokens({user_id: user.user_id, is_admin: user.is_admin});
+        const tokens = tokenService.generateTokens({
+            user_id: user.user_id,
+            company_id: user.company_id
+        });
         await UserModel.saveRefreshToken(user.user_id, tokens.refreshToken)
 
         res.cookie('refreshToken', tokens.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true})
