@@ -446,6 +446,7 @@ class UserController {
                 });
             }
 
+
             let activationResult = await UserModel.activateUser(user.user_id);
             if (!activationResult) {
                 return res.status(200).json({
@@ -453,6 +454,8 @@ class UserController {
                     error: 'Unknown_error'
                 });
             }
+
+            user.company_id = 0;
 
             await this.doAuth(res, user);
 
